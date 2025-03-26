@@ -2,3 +2,6 @@
 .Rhistory
 .RData
 .Ruserdata
+# ignorar el generador del informe
+informe.Rmd
+eval "$(ssh-agent -s)".pub
