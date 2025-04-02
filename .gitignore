@@ -5,3 +5,4 @@
 # ignorar el generador del informe
 informe.Rmd
 eval "$(ssh-agent -s)".pub
+eval "$(ssh-agent -s)"
