@@ -154,6 +154,17 @@ rowData(metabo_sumexp) %>%
         axis.line.y.right = element_line(color = "darkred"))
 
 ## missing readouts in QC ----
+# dataset_exploration <- 
+dataset_exploration <- assay(metabo_sumexp) %>% 
+  as.data.frame() %>% 
+  rownames_to_column("var") %>% 
+  pivot_longer(cols = -c(1)) %>% 
+  left_join(., as.data.frame(rowData(metabo_sumexp)[1]) %>% 
+              rownames_to_column("var")) %>% 
+  left_join(., as.data.frame(colData(metabo_sumexp)[2]) %>% 
+              rownames_to_column(var = "name")
+              )
+
 # in all samples - might be relevant if some are i.e., tumor-specific
 missing_overview <- dataset_exploration %>% 
   group_by(nombre_metabolito, Class) %>% 
@@ -182,6 +193,19 @@ missing_overview %>%
   scale_y_continuous(limits = c(0,60),
                      breaks = seq(0,60, 10)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+## boxplots ----
+dataset_exploration %>%
+  ggplot(aes(x = nombre_metabolito,
+             y = value)) +
+  geom_line(aes(group = name),
+            color = "grey",
+            alpha = .5) +
+  geom_boxplot() +
+  scale_y_continuous(trans = "log10") +
+  theme(axis.text.x = element_text(angle = 90, 
+                                   hjust = 1, 
+                                   vjust = 0.5))
 
 ## POMA ----
 # BiocManager::install("POMA")
@@ -213,13 +237,19 @@ table(is.na(assay(metabo_sumexp_qc, "imputed_data")))
 
 ### normalization ----
 # log (la que use para primera inspeccion)
-assays(metabo_sumexp_qc)[["normalized_log"]] <- assay(imputed %>%
-                                                        PomaNorm(method = "log_scaling"))
+assays(metabo_sumexp_qc)[["normalized_log"]] <- assay(SummarizedExperiment(
+  assays = list(imputed_data = assays(metabo_sumexp_qc)[["imputed_data"]]), 
+  colData = colData(metabo_sumexp_qc), 
+  rowData = rowData(metabo_sumexp_qc)) %>% 
+    PomaNorm(method = "log_scaling"))
 
 
 # log-pareto: valor/sqrt(sd(metabolito)) - conserva mejor la diferencia entre metabolitos con mucha vs poca varianza
-assays(metabo_sumexp_qc)[["normalized_logpareto"]] <- assay(imputed %>%
-                                                               PomaNorm(method = "log_pareto"))
+assays(metabo_sumexp_qc)[["normalized_logpareto"]] <- assay(SummarizedExperiment(
+  assays = list(imputed_data = assays(metabo_sumexp_qc)[["imputed_data"]]), 
+  colData = colData(metabo_sumexp_qc), 
+  rowData = rowData(metabo_sumexp_qc)) %>% 
+    PomaNorm(method = "log_pareto"))
 
 # escala original
 # box samples por metabolito
@@ -282,6 +312,9 @@ metabo_sumexp_norm_log <- SummarizedExperiment(assays = list(imputed = assay(met
 PomaOutliers(metabo_sumexp_norm_log)$polygon_plot
 
 PomaOutliers(metabo_sumexp_norm_log)$outliers
+
+# que muestra es
+colData(metabo_sumexp_norm_log)["sample_42", ]
 
 ### preprocessed analysis dataset---- 
 # 52 metabolitos en 139 muestras
@@ -362,7 +395,10 @@ pre_processed_analysis_he_gc[rownames(pre_processed_analysis_he_gc) %in% metabol
               feature_names = TRUE
               )
 
-# in tutorial - red  = important to distinguish GC from HE. If value <0.05 --> HE
+# overlap PCA y limma
+metabolitos_limma[!(metabolitos_limma %in% metabolites_gcpc2)]
+
+metabolites_gcpc2[!(metabolites_gcpc2 %in% metabolitos_limma)]
 
 # outputs -----------------------------------------------------------------
 
@@ -370,8 +406,8 @@ pre_processed_analysis_he_gc[rownames(pre_processed_analysis_he_gc) %in% metabol
 save(metabo_sumexp, file = "summarized_experiment.rda")
 
 ## datos txt ----
-write.table(x = assay(metabo_sumexp), 
-            file = "datos.txt", 
-            sep = ",", 
-            row.names = FALSE, 
+write.table(x = assay(metabo_sumexp),
+            file = "datos.txt",
+            sep = ",",
+            row.names = FALSE,
             col.names = TRUE)
