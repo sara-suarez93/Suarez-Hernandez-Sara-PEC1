@@ -1,30 +1,94 @@
 ---
-title: "metadatos"
-author: "Sara Suárez"
+title: "PEC1: Metadatos del dataset de metabolómica 2023-CIMCBTutorial"
+author: "Sara Suárez Hernández"
 date: "`r Sys.Date()`"
-output: html_document
+output: 
+  pdf_document:
+    df_print: kable
+    latex_engine: xelatex
+    toc: true
+    toc_depth: 4
 ---
 
+
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE, 
+                      warning = FALSE,
+                      message = FALSE)
+
+library(tidyverse)
+library("SummarizedExperiment")
+library(POMA)
+library(ggtext)
+library(magrittr)
+
+my_theme <- 
+  theme_bw() +
+  theme(legend.position = "bottom")
+
+theme_set(my_theme)
 ```
 
-## R Markdown
+## 1. Objecto summarizedExperiment
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+```{r}
+load(file = "summarized_experiment.rda")
+metabo_sumexp
 ```
 
-## Including Plots
+## 2. Metadatos
 
-You can also embed plots, for example:
+### 2.1 Metadatos muestras
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+Loa metadatos disponibles para las muestras son escasos, limitándose a:
+
+* **SampleType**: tipo de muestra. 
+
+  + QC: control.
+  + Sample: muestra experimental.
+
+* **Class**: clase. 
+
+  + HE: participante sano.
+  + GC: participante con tumos maligno (de estómago).
+  + BN: tumor benigno.
+
+```{r}
+colData(metabo_sumexp)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+Esta tabla muestra el número de tipo de muestras por clase:
+
+```{r}
+colData(metabo_sumexp) %>% 
+  as.data.frame() %>% 
+  dplyr::count(SampleType, Class) %>% 
+  kableExtra::kable()
+```
+
+### 2.2 Metadatos metabolitos
+
+También hay metadatos para los metabolitos, que incluyen:
+
+* **nombre_metabolito**: nombre de la molécula.
+
+* **Perc_missing**: porcentaje de muestras en la que se detectó el metabolito. 
+
+* **QC_RSD**: medida de la variación de la medida de cada uno de los metabolitos.
+
+Estas dos últimas columnas determinan el criterio de inclusión de los metabolitos en el análisis de los datos (perc_missing<10% and QC_RSD<20).
+
+```{r}
+rowData(metabo_sumexp)
+```
+
+La siguiente tabla muestra los estadísticos de resumen de la distribución de *Perc_missing* y *QC_RSD*:
+
+```{r}
+rowData(metabo_sumexp) %>% 
+  as.data.frame() %>% 
+  dplyr::select(-c(1)) %>% 
+  summary() %>% 
+  kableExtra::kable()
+```
+
